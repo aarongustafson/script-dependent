@@ -1,6 +1,6 @@
 {
 	"name": "@aarongustafson/script-dependent",
-	"version": "0.0.1",
+	"version": "1.0.0",
 	"description": "Reveals authored content only after its module and optional initializer are ready.",
 	"keywords": [
 		"html",
