@@ -5,15 +5,13 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>script-dependent via esm.sh</title>
 		<link rel="stylesheet" href="./styles.css" />
-		<style>
-			/* Demo-specific styles */
-		</style>
 	</head>
 	<body>
 		<h1>esm.sh CDN sanity check</h1>
 		<p>
 			This page loads the component class from <code>esm.sh</code> and
-			registers it manually.
+			registers it manually. It requires the package version below to be
+			published; the local demo does not depend on a CDN.
 		</p>
 
 		<main>
@@ -25,30 +23,50 @@
     'https://esm.sh/@aarongustafson/script-dependent@0.0.1/script-dependent.js?bundle&amp;target=es2022';</mark>
 
   if (!<mark>customElements.get('script-dependent')</mark>) {
-    <mark>customElements.define('script-dependent', ScriptDependentElement);</mark>
+    <mark>customElements.define(
+      'script-dependent',
+      ScriptDependentElement,
+    );</mark>
   }
 &lt;/script&gt;
 
-<mark>&lt;script-dependent&gt;</mark>
-  &lt;p&gt;Replace this markup once you customize script-dependent.&lt;/p&gt;
+&lt;label for="draft"&gt;Your draft&lt;/label&gt;
+&lt;textarea id="draft"&gt;&lt;/textarea&gt;
+<mark>&lt;script-dependent script="./word-count.js" hidden&gt;</mark>
+  &lt;button type="button"&gt;Count words&lt;/button&gt;
+  &lt;p&gt;Words: &lt;output aria-live="polite"&gt;0&lt;/output&gt;&lt;/p&gt;
 <mark>&lt;/script-dependent&gt;</mark></code></pre>
 					<div class="demo">
-						<script-dependent>
-							<p>
-								Replace this markup once you customize
-								script-dependent.
-							</p>
+						<label for="draft">Your draft</label>
+						<textarea id="draft" rows="3">
+Count words after the module is ready.</textarea>
+						<script-dependent script="./word-count.js" hidden>
+							<button type="button">Count words</button>
+							<p>Words: <output aria-live="polite">0</output></p>
 						</script-dependent>
 					</div>
 				</div>
 			</section>
 		</main>
+		<footer>
+			<p>
+				Made with ❤️ by
+				<a href="https://github.com/aarongustafson">Aaron Gustafson</a>.
+				View the source on
+				<a href="https://github.com/aarongustafson/script-dependent"
+					>GitHub</a
+				>.
+			</p>
+		</footer>
 
 		<script type="module">
 			import { ScriptDependentElement } from 'https://esm.sh/@aarongustafson/script-dependent@0.0.1/script-dependent.js?bundle&target=es2022';
 
 			if (!customElements.get('script-dependent')) {
-				customElements.define('script-dependent', ScriptDependentElement);
+				customElements.define(
+					'script-dependent',
+					ScriptDependentElement,
+				);
 			}
 		</script>
 	</body>

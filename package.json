@@ -21,10 +21,10 @@
 	"main": "index.js",
 	"module": "script-dependent.js",
 	"customElements": "custom-elements.json",
-	"types": "script-dependent.d.ts",
+	"types": "index.d.ts",
 	"exports": {
 		".": {
-			"types": "./script-dependent.d.ts",
+			"types": "./index.d.ts",
 			"import": "./index.js"
 		},
 		"./script-dependent.js": {
@@ -32,6 +32,7 @@
 			"import": "./script-dependent.js"
 		},
 		"./define.js": {
+			"types": "./define.d.ts",
 			"import": "./define.js"
 		},
 		"./custom-elements.json": "./custom-elements.json"
@@ -39,6 +40,8 @@
 	"files": [
 		"script-dependent.js",
 		"script-dependent.d.ts",
+		"index.d.ts",
+		"define.d.ts",
 		"define.js",
 		"index.js",
 		"custom-elements.json",
@@ -53,14 +56,15 @@
 		"test": "vitest",
 		"test:ui": "vitest --ui",
 		"test:run": "vitest run",
+		"test:types": "tsc --noEmit --strict --lib ES2022,DOM --module NodeNext --moduleResolution NodeNext test/types.ts",
 		"test:coverage": "vitest run --coverage",
 		"test:browser": "playwright test",
 		"lint": "npm run lint:eslint && npm run lint:prettier",
 		"format": "npm run format:eslint && npm run format:prettier",
 		"lint:eslint": "eslint .",
 		"format:eslint": "eslint . --fix",
-		"lint:prettier": "prettier \"**/*.js\" \"demo/**/*.{css,html}\" --check --ignore-path .gitignore",
-		"format:prettier": "prettier \"**/*.js\" \"demo/**/*.{css,html}\" --write --ignore-path .gitignore",
+		"lint:prettier": "prettier \"**/*.{js,ts,html,css,json,md,yml,yaml}\" --check --ignore-path .gitignore",
+		"format:prettier": "prettier \"**/*.{js,ts,html,css,json,md,yml,yaml}\" --write --ignore-path .gitignore",
 		"version": "node scripts/update-demo-versions.js && git add demo/esm.html",
 		"postversion": "git push --follow-tags"
 	},
@@ -76,6 +80,7 @@
 		"happy-dom": "^21.0.4",
 		"marked": "18.1.0",
 		"prettier": "^3.9.9",
+		"typescript": "^5.9.3",
 		"vitest": "^5.0.5"
 	},
 	"publishConfig": {

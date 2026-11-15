@@ -5,15 +5,14 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>script-dependent via unpkg</title>
 		<link rel="stylesheet" href="./styles.css" />
-		<style>
-			/* Demo-specific styles */
-		</style>
 	</head>
 	<body>
 		<h1>unpkg CDN sanity check</h1>
 		<p>
 			This page loads the guarded definition helper from
-			<code>unpkg</code> and registers the element when supported.
+			<code>unpkg</code>. Importing it registers the default tag; the
+			helper is safe to call again. This example requires an npm
+			publication.
 		</p>
 
 		<main>
@@ -21,30 +20,44 @@
 				<h2>Import and call the registration helper</h2>
 				<div class="code-demo-pair">
 					<pre tabindex="0"><code>&lt;script type="module"&gt;
-  <mark>import { defineComponentName } from
+  <mark>import { defineScriptDependent } from
     'https://unpkg.com/@aarongustafson/script-dependent@latest/define.js?module';</mark>
-  <mark>defineComponentName();</mark>
+  <mark>defineScriptDependent();</mark>
 &lt;/script&gt;
 
-<mark>&lt;script-dependent&gt;</mark>
-  &lt;p&gt;Replace this markup once you customize script-dependent.&lt;/p&gt;
+&lt;label for="draft"&gt;Your draft&lt;/label&gt;
+&lt;textarea id="draft"&gt;&lt;/textarea&gt;
+<mark>&lt;script-dependent script="./word-count.js" hidden&gt;</mark>
+  &lt;button type="button"&gt;Count words&lt;/button&gt;
+  &lt;p&gt;Words: &lt;output aria-live="polite"&gt;0&lt;/output&gt;&lt;/p&gt;
 <mark>&lt;/script-dependent&gt;</mark></code></pre>
 					<div class="demo">
-						<script-dependent>
-							<p>
-								Replace this markup once you customize
-								script-dependent.
-							</p>
+						<label for="draft">Your draft</label>
+						<textarea id="draft" rows="3">
+Count words after the module is ready.</textarea>
+						<script-dependent script="./word-count.js" hidden>
+							<button type="button">Count words</button>
+							<p>Words: <output aria-live="polite">0</output></p>
 						</script-dependent>
 					</div>
 				</div>
 			</section>
 		</main>
+		<footer>
+			<p>
+				Made with ❤️ by
+				<a href="https://github.com/aarongustafson">Aaron Gustafson</a>.
+				View the source on
+				<a href="https://github.com/aarongustafson/script-dependent"
+					>GitHub</a
+				>.
+			</p>
+		</footer>
 
 		<script type="module">
-			import { defineComponentName } from 'https://unpkg.com/@aarongustafson/script-dependent@latest/define.js?module';
+			import { defineScriptDependent } from 'https://unpkg.com/@aarongustafson/script-dependent@latest/define.js?module';
 
-			defineComponentName();
+			defineScriptDependent();
 		</script>
 	</body>
 </html>

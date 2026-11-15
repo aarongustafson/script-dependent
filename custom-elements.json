@@ -1,6 +1,6 @@
 {
 	"schemaVersion": "1.0.0",
-	"readme": "",
+	"readme": "README.md",
 	"modules": [
 		{
 			"kind": "javascript-module",
@@ -8,16 +8,82 @@
 			"declarations": [
 				{
 					"kind": "class",
-					"description": "Reveals authored content only after its module and optional initializer are ready.",
 					"name": "ScriptDependentElement",
-					"members": [],
-					"events": [],
-					"attributes": [],
-					"superclass": {
-						"name": "HTMLElement"
-					},
+					"description": "Light-DOM readiness gate for a module and optional initialize(element, {signal}).",
+					"superclass": { "name": "HTMLElement" },
 					"tagName": "script-dependent",
-					"customElement": true
+					"customElement": true,
+					"members": [
+						{
+							"kind": "field",
+							"name": "script",
+							"attribute": "script",
+							"type": { "text": "string | null" },
+							"description": "Required HTTP(S) module URL resolved against document.baseURI."
+						},
+						{
+							"kind": "field",
+							"name": "state",
+							"readonly": true,
+							"type": {
+								"text": "'idle' | 'loading' | 'ready' | 'error'"
+							},
+							"default": "'idle'",
+							"description": "Current readiness state, reflected in data-script-dependent-state."
+						},
+						{
+							"kind": "method",
+							"name": "retry",
+							"description": "Aborts the previous initializer and retries when connected; browser module caching still applies.",
+							"return": { "type": { "text": "void" } }
+						}
+					],
+					"attributes": [
+						{
+							"name": "script",
+							"fieldName": "script",
+							"type": { "text": "string" },
+							"description": "Required module URL. Changes hide content, abort initialization and start again."
+						},
+						{
+							"name": "hidden",
+							"type": { "text": "boolean" },
+							"description": "Author initially. Component-owned during loading/error; removed on success unless the author hid previously ready content."
+						},
+						{
+							"name": "data-script-dependent-state",
+							"type": {
+								"text": "'idle' | 'loading' | 'ready' | 'error'"
+							},
+							"description": "Component-owned output for styling, not configuration."
+						}
+					],
+					"events": [
+						{
+							"name": "script-dependent:loading",
+							"type": {
+								"text": "CustomEvent<ScriptDependentDetail>"
+							},
+							"description": "Bubbling, composed event with authored detail.script when an attempt starts."
+						},
+						{
+							"name": "script-dependent:ready",
+							"type": {
+								"text": "CustomEvent<ScriptDependentDetail>"
+							},
+							"description": "Bubbling, composed event with resolved detail.script after evaluation and initialization succeed."
+						},
+						{
+							"name": "script-dependent:error",
+							"type": {
+								"text": "CustomEvent<ScriptDependentErrorDetail>"
+							},
+							"description": "Bubbling, composed event with detail.script and detail.error when the current attempt fails; content stays hidden."
+						}
+					],
+					"cssProperties": [],
+					"cssParts": [],
+					"slots": []
 				}
 			],
 			"exports": [
@@ -27,6 +93,66 @@
 					"declaration": {
 						"name": "ScriptDependentElement",
 						"module": "script-dependent.js"
+					}
+				}
+			]
+		},
+		{
+			"kind": "javascript-module",
+			"path": "define.js",
+			"declarations": [
+				{
+					"kind": "function",
+					"name": "defineScriptDependent",
+					"description": "Registers the class, or a subclass for a custom name, unless already defined. Import registers script-dependent. Browser-only module.",
+					"parameters": [
+						{
+							"name": "tagName",
+							"default": "'script-dependent'",
+							"type": { "text": "string" }
+						}
+					],
+					"return": { "type": { "text": "boolean" } }
+				}
+			],
+			"exports": [
+				{
+					"kind": "js",
+					"name": "defineScriptDependent",
+					"declaration": {
+						"name": "defineScriptDependent",
+						"module": "define.js"
+					}
+				},
+				{
+					"kind": "custom-element-definition",
+					"name": "script-dependent",
+					"declaration": {
+						"name": "ScriptDependentElement",
+						"module": "script-dependent.js"
+					}
+				}
+			]
+		},
+		{
+			"kind": "javascript-module",
+			"path": "index.js",
+			"declarations": [],
+			"exports": [
+				{
+					"kind": "js",
+					"name": "ScriptDependentElement",
+					"declaration": {
+						"name": "ScriptDependentElement",
+						"module": "script-dependent.js"
+					}
+				},
+				{
+					"kind": "js",
+					"name": "defineScriptDependent",
+					"declaration": {
+						"name": "defineScriptDependent",
+						"module": "define.js"
 					}
 				}
 			]

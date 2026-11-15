@@ -3,86 +3,165 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>&lt;script-dependent&gt; Web Component Demo</title>
+		<title>&lt;script-dependent&gt; demo</title>
 		<link rel="stylesheet" href="./styles.css" />
-		<style>
-			/* Demo-specific styles */
-		</style>
 	</head>
 	<body>
 		<header>
 			<h1>&lt;script-dependent&gt;</h1>
 			<p>
-				Reveals authored content only after its module and optional initializer are ready. See the
+				Reveal dependent controls when their module is ready. Read the
 				<a
 					href="https://github.com/aarongustafson/script-dependent/blob/main/README.md"
 					>README</a
 				>
-				for installation and API documentation.
+				for the complete API.
 			</p>
 		</header>
-
 		<main>
-			<!-- Basic Example -->
 			<section>
-				<h2>Basic Example</h2>
-				<p>A simple demonstration of the component.</p>
-
-				<div class="demo-section">
-					<h3>Basic Usage</h3>
-					<p>Description of this example.</p>
-					<div class="code-demo-pair">
-						<pre
-							tabindex="0"
-						><code><mark>&lt;script-dependent&gt;</mark>
-  &lt;p&gt;Content goes here&lt;/p&gt;
-<mark>&lt;/script-dependent&gt;</mark></code></pre>
-						<div class="demo">
-							<script-dependent>
-								<p>Content goes here</p>
-							</script-dependent>
-						</div>
-					</div>
-				</div>
-			</section>
-
-			<!-- Example with Attributes -->
-			<section>
-				<h2>Example with Attributes</h2>
-				<p>Demonstrating component attributes.</p>
-
-				<div class="demo-section">
-					<h3>Using Attributes</h3>
-					<p>Description of this example with attributes.</p>
-					<div class="code-demo-pair">
-						<pre
-							tabindex="0"
-						><code><mark>&lt;script-dependent example-attribute="value"&gt;</mark>
-  &lt;p&gt;Content with attributes&lt;/p&gt;
-<mark>&lt;/script-dependent&gt;</mark></code></pre>
-						<div class="demo">
-							<script-dependent example-attribute="value">
-								<p>Content with attributes</p>
-							</script-dependent>
-						</div>
-					</div>
-				</div>
-			</section>
-
-			<!-- API Reference -->
-			<section class="api-reference">
-				<h2>API Reference</h2>
+				<h2>Readiness, not just downloading</h2>
 				<p>
-					For complete documentation of attributes, events, and
-					browser support, see the
-					<a
-						href="https://github.com/aarongustafson/script-dependent/blob/main/README.md"
-						>README</a
-					>.
+					Give the wrapper a <code>script</code> URL and author it
+					with <code>hidden</code>. If the module exports
+					<code>initialize(element, { signal })</code>, the wrapper
+					waits for it. Without that export, successful module
+					evaluation is enough.
 				</p>
+				<p>
+					These word counters wait briefly to make loading visible.
+					The text fields stay usable throughout. Both successful
+					examples use the
+					<a href="./word-count.js">same initializer</a>, but each
+					gets its own setup.
+				</p>
+				<noscript
+					><p>
+						The word counter needs JavaScript. You can still write
+						and edit the text below.
+					</p></noscript
+				>
+			</section>
+
+			<section class="demo-section">
+				<h2>Existing markup</h2>
+				<p>
+					The button and output already exist. They become available
+					only after the module has attached their behavior. The field
+					stays outside the gate.
+				</p>
+				<div class="code-demo-pair">
+					<pre
+						tabindex="0"
+					><code>&lt;label for="existing-text"&gt;Your draft&lt;/label&gt;
+&lt;textarea id="existing-text"&gt;&lt;/textarea&gt;
+<mark>&lt;script-dependent script="./word-count.js" hidden&gt;</mark>
+  &lt;button type="button"&gt;Count words&lt;/button&gt;
+  &lt;p&gt;Words: &lt;output aria-live="polite"&gt;0&lt;/output&gt;&lt;/p&gt;
+<mark>&lt;/script-dependent&gt;</mark></code></pre>
+					<div class="demo">
+						<label for="existing-text">Your draft</label>
+						<textarea id="existing-text" rows="3">
+Start with a few words.</textarea>
+						<script-dependent
+							id="existing"
+							script="./word-count.js"
+							hidden
+						>
+							<button type="button">Count words</button>
+							<p>Words: <output aria-live="polite">0</output></p>
+						</script-dependent>
+						<p id="existing-status" role="status">
+							You can edit the draft while the counter loads.
+						</p>
+					</div>
+				</div>
+			</section>
+
+			<section class="demo-section">
+				<h2>Inert template content</h2>
+				<p>
+					A single direct-child <code>template</code> keeps
+					enhancement-only markup inert. After module evaluation, the
+					wrapper instantiates it once and passes the resulting
+					content to the initializer.
+				</p>
+				<div class="code-demo-pair">
+					<pre
+						tabindex="0"
+					><code>&lt;label for="template-text"&gt;Another draft&lt;/label&gt;
+&lt;textarea id="template-text"&gt;&lt;/textarea&gt;
+<mark>&lt;script-dependent script="./word-count.js" hidden&gt;</mark>
+  &lt;template&gt;
+    &lt;button type="button"&gt;Count words&lt;/button&gt;
+    &lt;p&gt;Words: &lt;output aria-live="polite"&gt;0&lt;/output&gt;&lt;/p&gt;
+  &lt;/template&gt;
+<mark>&lt;/script-dependent&gt;</mark></code></pre>
+					<div class="demo">
+						<label for="template-text">Another draft</label>
+						<textarea id="template-text" rows="3">
+Template content starts inert.</textarea>
+						<script-dependent
+							id="templated"
+							script="./word-count.js"
+							hidden
+						>
+							<template>
+								<button type="button">Count words</button>
+								<p>
+									Words: <output aria-live="polite">0</output>
+								</p>
+							</template>
+						</script-dependent>
+						<p id="templated-status" role="status">
+							The template counter is loading; your draft is
+							available.
+						</p>
+					</div>
+				</div>
+			</section>
+
+			<section class="demo-section">
+				<h2>Failure and recovery</h2>
+				<p>
+					This initializer deliberately rejects. The unavailable
+					button stays hidden, and the ordinary link remains usable.
+					<code>retry()</code> starts another attempt; this example
+					will fail again rather than pretend to recover.
+				</p>
+				<div class="code-demo-pair">
+					<pre
+						tabindex="0"
+					><code><mark>&lt;script-dependent script="./failure.js" hidden&gt;</mark>
+  &lt;button type="button"&gt;Open enhanced editor&lt;/button&gt;
+<mark>&lt;/script-dependent&gt;</mark>
+&lt;p&gt;&lt;a href="#existing-text"&gt;Use the ordinary text field&lt;/a&gt;&lt;/p&gt;
+
+<mark>gate.addEventListener('script-dependent:error', showError);
+retryButton.addEventListener('click', () =&gt; gate.retry());</mark></code></pre>
+					<div class="demo">
+						<script-dependent
+							id="failure"
+							script="./failure.js"
+							hidden
+						>
+							<button type="button">Open enhanced editor</button>
+						</script-dependent>
+						<p>
+							<a href="#existing-text"
+								>Use the ordinary text field</a
+							>
+						</p>
+						<p id="failure-status" role="status">
+							The ordinary text field is always available.
+						</p>
+						<button id="retry" type="button" hidden>
+							Try again
+						</button>
+					</div>
+				</div>
 			</section>
 		</main>
-
 		<footer>
 			<p>
 				Made with ❤️ by
@@ -93,7 +172,6 @@
 				>.
 			</p>
 		</footer>
-
-		<script src="../define.js" type="module"></script>
+		<script type="module" src="./demo.js"></script>
 	</body>
 </html>

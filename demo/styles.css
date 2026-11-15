@@ -9,6 +9,24 @@
 	color-scheme: light dark;
 }
 
+* {
+	box-sizing: border-box;
+}
+
+[hidden] {
+	display: none !important;
+}
+
+script-dependent {
+	display: block;
+	margin-block-start: 1rem;
+}
+
+.code-demo-pair > * {
+	min-inline-size: 0;
+	max-inline-size: 100%;
+}
+
 body {
 	font-family:
 		-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,

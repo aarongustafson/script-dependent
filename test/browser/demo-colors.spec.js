@@ -598,10 +598,11 @@ test.describe('authored demo without JavaScript', () => {
 		});
 		await page.goto('http://demo.test/demo/index.html');
 		const pairs = page.locator('.code-demo-pair');
-		await expect(pairs).toHaveCount(2);
-		await expect(page.locator('.demo').first()).toContainText(
-			'Content goes here',
-		);
+		await expect(pairs).toHaveCount(3);
+		await expect(page.locator('#existing-text')).toBeVisible();
+		await expect(page.locator('#existing')).toBeHidden();
+		await expect(page.locator('#templated')).toBeHidden();
+		await expect(page.locator('#failure')).toBeHidden();
 		for (const width of [1000, 320]) {
 			await page.setViewportSize({ width, height: 800 });
 			for (const pair of await pairs.all()) {
