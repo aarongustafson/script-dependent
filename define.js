@@ -1,6 +1,6 @@
 import { ScriptDependentElement } from './script-dependent.js';
 
-export function defineComponentName(tagName = 'script-dependent') {
+export function defineScriptDependent(tagName = 'script-dependent') {
 	const hasWindow = typeof window !== 'undefined';
 	const registry = hasWindow ? window.customElements : undefined;
 
@@ -9,10 +9,15 @@ export function defineComponentName(tagName = 'script-dependent') {
 	}
 
 	if (!registry.get(tagName)) {
-		registry.define(tagName, ScriptDependentElement);
+		registry.define(
+			tagName,
+			tagName === 'script-dependent'
+				? ScriptDependentElement
+				: class extends ScriptDependentElement {},
+		);
 	}
 
 	return true;
 }
 
-defineComponentName();
+defineScriptDependent();

@@ -1,100 +1,295 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ScriptDependentElement } from '../script-dependent.js';
 
-const elementName = 'script-dependent'.toLowerCase();
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+function gate(markup = '<button type="button">Action</button>') {
+	const element = document.createElement('script-dependent');
+	element.hidden = true;
+	element.script = '/module.js';
+	element.innerHTML = markup;
+	return element;
+}
 
-describe('ScriptDependentElement', () => {
-	let element;
+afterEach(() => {
+	document.body.replaceChildren();
+	vi.restoreAllMocks();
+});
 
-	beforeEach(async () => {
-		element = document.createElement(elementName);
-		document.body.appendChild(element);
-		await new Promise((resolve) => requestAnimationFrame(resolve));
+describe('readiness', () => {
+	it('preserves actual light-DOM nodes and reveals only after initialization', async () => {
+		let finish;
+		const initialize = vi.fn(
+			() =>
+				new Promise((resolve) => {
+					finish = resolve;
+				}),
+		);
+		vi.spyOn(ScriptDependentElement, '_importModule').mockResolvedValue({
+			initialize,
+		});
+		const element = gate();
+		const button = element.firstElementChild;
+		const click = vi.fn();
+		button.addEventListener('click', click);
+		const states = [];
+		for (const name of ['loading', 'ready'])
+			element.addEventListener(`script-dependent:${name}`, () =>
+				states.push(element.state),
+			);
+		document.body.append(element);
+		await settle();
+		expect(element.hidden).toBe(true);
+		expect(element.state).toBe('loading');
+		expect(initialize).toHaveBeenCalledWith(element, {
+			signal: expect.any(AbortSignal),
+		});
+		finish();
+		await settle();
+		expect(element.hidden).toBe(false);
+		expect(element.state).toBe('ready');
+		expect(states).toEqual(['loading', 'ready']);
+		expect(element.firstElementChild).toBe(button);
+		expect(element.shadowRoot).toBeNull();
+		button.click();
+		expect(click).toHaveBeenCalledOnce();
 	});
 
-	afterEach(() => {
+	it('reveals after evaluation without an initializer and resolves against document baseURI', async () => {
+		const load = vi
+			.spyOn(ScriptDependentElement, '_importModule')
+			.mockResolvedValue({});
+		const element = gate();
+		element.script = './module.js';
+		document.body.append(element);
+		await settle();
+		expect(load).toHaveBeenCalledWith(
+			new URL('./module.js', document.baseURI).href,
+		);
+		expect(element.state).toBe('ready');
+		expect(element.hidden).toBe(false);
+	});
+
+	for (const module of [{ initialize: false }, { initialize: null }]) {
+		it('reports a non-callable initializer as a configuration failure', async () => {
+			vi.spyOn(ScriptDependentElement, '_importModule').mockResolvedValue(
+				module,
+			);
+			const element = gate();
+			const error = vi.fn();
+			element.addEventListener('script-dependent:error', error);
+			document.body.append(element);
+			await settle();
+			expect(element.hidden).toBe(true);
+			expect(element.state).toBe('error');
+			expect(error.mock.calls[0][0].detail.error).toBeInstanceOf(
+				TypeError,
+			);
+		});
+	}
+
+	for (const phase of ['import', 'initialize']) {
+		it(`keeps content hidden and exposes ${phase} rejection`, async () => {
+			const failure = new Error('Failure');
+			const load = vi.spyOn(ScriptDependentElement, '_importModule');
+			if (phase === 'import') load.mockRejectedValue(failure);
+			else
+				load.mockResolvedValue({
+					initialize: () => {
+						throw failure;
+					},
+				});
+			const element = gate();
+			const error = vi.fn();
+			element.addEventListener('script-dependent:error', error);
+			document.body.append(element);
+			await settle();
+			expect(element.hidden).toBe(true);
+			expect(element.state).toBe('error');
+			expect(error).toHaveBeenCalledOnce();
+			expect(error.mock.calls[0][0].detail.error).toBe(failure);
+		});
+	}
+
+	for (const script of [
+		null,
+		'',
+		'   ',
+		'javascript:alert(1)',
+		'data:text/javascript,export{}',
+		'file:///module.js',
+	]) {
+		it(`rejects invalid source ${script}`, async () => {
+			const load = vi.spyOn(ScriptDependentElement, '_importModule');
+			const element = gate();
+			element.script = script;
+			const error = vi.fn();
+			element.addEventListener('script-dependent:error', error);
+			document.body.append(element);
+			await settle();
+			expect(element.hidden).toBe(true);
+			expect(element.state).toBe('error');
+			expect(error).toHaveBeenCalledOnce();
+			expect(load).not.toHaveBeenCalled();
+		});
+	}
+});
+
+describe('templates and lifecycle', () => {
+	it('materializes a direct template once before initialization and leaves nested templates inert', async () => {
+		let initialized = 0;
+		vi.spyOn(ScriptDependentElement, '_importModule').mockResolvedValue({
+			initialize(element) {
+				expect(element.querySelector('button')).not.toBeNull();
+				expect(element.querySelector('template')).not.toBeNull();
+				initialized++;
+			},
+		});
+		const element = gate(
+			'<template><button>Action</button><div><template><p>Nested</p></template></div></template>',
+		);
+		document.body.append(element);
+		await settle();
+		const button = element.querySelector('button');
 		element.remove();
+		document.body.append(element);
+		await settle();
+		expect(element.querySelector('button')).toBe(button);
+		expect(element.querySelectorAll('button')).toHaveLength(1);
+		expect(element.querySelector('p')).toBeNull();
+		expect(initialized).toBe(2);
 	});
 
-	it('should be defined', () => {
-		expect(customElements.get(elementName)).toBe(ScriptDependentElement);
+	it('rejects ambiguous direct templates without consuming either', async () => {
+		vi.spyOn(ScriptDependentElement, '_importModule').mockResolvedValue({});
+		const element = gate(
+			'<template>One</template><template>Two</template>',
+		);
+		document.body.append(element);
+		await settle();
+		expect(element.state).toBe('error');
+		expect(element.querySelectorAll('template')).toHaveLength(2);
 	});
 
-	it('should create an instance', () => {
-		expect(element).toBeInstanceOf(ScriptDependentElement);
-		expect(element).toBeInstanceOf(HTMLElement);
+	it('aborts on source changes and ignores stale success or failure', async () => {
+		let finish;
+		let signal;
+		const initialize = vi.fn((element, options) => {
+			signal = options.signal;
+			return new Promise((resolve) => {
+				finish = resolve;
+			});
+		});
+		vi.spyOn(ScriptDependentElement, '_importModule')
+			.mockResolvedValueOnce({ initialize })
+			.mockResolvedValueOnce({
+				initialize: () => Promise.reject(new Error('Current failure')),
+			});
+		const element = gate();
+		document.body.append(element);
+		await settle();
+		element.script = '/other.js';
+		expect(signal.aborted).toBe(true);
+		await settle();
+		finish();
+		await settle();
+		expect(element.state).toBe('error');
+		expect(element.hidden).toBe(true);
 	});
 
-	it('should have a shadow root', () => {
-		expect(element.shadowRoot).toBeTruthy();
+	it('ignores a stale rejected import after a newer source becomes ready', async () => {
+		let reject;
+		vi.spyOn(ScriptDependentElement, '_importModule')
+			.mockImplementationOnce(
+				() =>
+					new Promise((resolve, fail) => {
+						reject = fail;
+					}),
+			)
+			.mockResolvedValueOnce({});
+		const element = gate();
+		const error = vi.fn();
+		element.addEventListener('script-dependent:error', error);
+		document.body.append(element);
+		await settle();
+		element.script = '/new.js';
+		await settle();
+		reject(new Error('Stale failure'));
+		await settle();
+		expect(element.state).toBe('ready');
+		expect(element.hidden).toBe(false);
+		expect(error).not.toHaveBeenCalled();
 	});
 
-	describe('Shadow DOM Best Practices', () => {
-		it('should create shadow root in constructor', () => {
-			const newElement = new ScriptDependentElement();
-			expect(newElement.shadowRoot).toBeTruthy();
+	it('aborts cooperative work on disconnect and does not reveal detached content', async () => {
+		let finish;
+		let signal;
+		vi.spyOn(ScriptDependentElement, '_importModule').mockResolvedValue({
+			initialize(element, options) {
+				signal = options.signal;
+				return new Promise((resolve) => {
+					finish = resolve;
+				});
+			},
 		});
-
-		it('should support the hidden attribute with proper display style', () => {
-			element.setAttribute('hidden', '');
-			const styles = window.getComputedStyle(element);
-			expect(styles.display).toBe('none');
-		});
-
-		it('should have default display style of block', () => {
-			const styles = window.getComputedStyle(element);
-			expect(styles.display).toBe('block');
-		});
+		const element = gate();
+		document.body.append(element);
+		await settle();
+		element.remove();
+		finish();
+		await settle();
+		expect(signal.aborted).toBe(true);
+		expect(element.state).toBe('idle');
+		expect(element.hidden).toBe(true);
 	});
 
-	describe('Attributes and Properties', () => {
-		it('should reflect attribute to property', () => {
-			element.setAttribute('example-attribute', 'test-value');
-			expect(element.exampleAttribute).toBe('test-value');
+	it('initializes each wrapper separately and retries failures without duplicating markup', async () => {
+		const initialize = vi
+			.fn()
+			.mockRejectedValueOnce(new Error('Temporary'))
+			.mockResolvedValue(undefined);
+		vi.spyOn(ScriptDependentElement, '_importModule').mockResolvedValue({
+			initialize,
 		});
-
-		it('should reflect property to attribute', () => {
-			element.exampleAttribute = 'property-value';
-			expect(element.getAttribute('example-attribute')).toBe(
-				'property-value',
-			);
-		});
-
-		it('should remove attribute when property set to null', () => {
-			element.exampleAttribute = 'test';
-			expect(element.hasAttribute('example-attribute')).toBe(true);
-
-			element.exampleAttribute = null;
-			expect(element.hasAttribute('example-attribute')).toBe(false);
-		});
-
-		it('should remove attribute when property set to undefined', () => {
-			element.exampleAttribute = 'test';
-			expect(element.hasAttribute('example-attribute')).toBe(true);
-
-			element.exampleAttribute = undefined;
-			expect(element.hasAttribute('example-attribute')).toBe(false);
-		});
-
-		it('should handle lazy property upgrade (property set before element upgrade)', () => {
-			// Create an element but don't connect it yet
-			const uninitializedElement = document.createElement(elementName);
-
-			// Set property before connecting (simulates framework setting property before upgrade)
-			uninitializedElement.exampleAttribute = 'early-value';
-
-			// Now connect it
-			document.body.appendChild(uninitializedElement);
-
-			// Property should be preserved
-			expect(uninitializedElement.exampleAttribute).toBe('early-value');
-			expect(uninitializedElement.getAttribute('example-attribute')).toBe(
-				'early-value',
-			);
-
-			uninitializedElement.remove();
-		});
+		const first = gate('<template><button>Action</button></template>');
+		document.body.append(first);
+		await settle();
+		expect(first.state).toBe('error');
+		first.retry();
+		const second = gate();
+		document.body.append(second);
+		await settle();
+		expect(first.state).toBe('ready');
+		expect(second.state).toBe('ready');
+		expect(first.querySelectorAll('button')).toHaveLength(1);
+		expect(initialize).toHaveBeenCalledTimes(3);
 	});
 
-	// Add more tests here
+	it('preserves an author hiding ready content across retries and reconnects', async () => {
+		vi.spyOn(ScriptDependentElement, '_importModule').mockResolvedValue({});
+		const element = gate();
+		document.body.append(element);
+		await settle();
+		element.hidden = true;
+		element.retry();
+		await settle();
+		expect(element.state).toBe('ready');
+		expect(element.hidden).toBe(true);
+		element.remove();
+		document.body.append(element);
+		await settle();
+		expect(element.hidden).toBe(true);
+	});
+
+	it('reflects script properties and upgrades a pre-definition property', async () => {
+		vi.spyOn(ScriptDependentElement, '_importModule').mockResolvedValue({});
+		class LateGate extends ScriptDependentElement {}
+		const element = document.createElement('late-script-dependent');
+		element.script = '/late.js';
+		document.body.append(element);
+		customElements.define('late-script-dependent', LateGate);
+		await settle();
+		expect(element.getAttribute('script')).toBe('/late.js');
+		element.script = null;
+		expect(element.hasAttribute('script')).toBe(false);
+	});
 });
