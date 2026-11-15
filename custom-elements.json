@@ -1,0 +1,35 @@
+{
+	"schemaVersion": "1.0.0",
+	"readme": "",
+	"modules": [
+		{
+			"kind": "javascript-module",
+			"path": "script-dependent.js",
+			"declarations": [
+				{
+					"kind": "class",
+					"description": "Reveals authored content only after its module and optional initializer are ready.",
+					"name": "ScriptDependentElement",
+					"members": [],
+					"events": [],
+					"attributes": [],
+					"superclass": {
+						"name": "HTMLElement"
+					},
+					"tagName": "script-dependent",
+					"customElement": true
+				}
+			],
+			"exports": [
+				{
+					"kind": "js",
+					"name": "ScriptDependentElement",
+					"declaration": {
+						"name": "ScriptDependentElement",
+						"module": "script-dependent.js"
+					}
+				}
+			]
+		}
+	]
+}

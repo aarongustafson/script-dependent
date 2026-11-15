@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>script-dependent via esm.sh</title>
+		<link rel="stylesheet" href="./styles.css" />
+		<style>
+			/* Demo-specific styles */
+		</style>
+	</head>
+	<body>
+		<h1>esm.sh CDN sanity check</h1>
+		<p>
+			This page loads the component class from <code>esm.sh</code> and
+			registers it manually.
+		</p>
+
+		<main>
+			<section class="demo-section">
+				<h2>Import and register the class</h2>
+				<div class="code-demo-pair">
+					<pre tabindex="0"><code>&lt;script type="module"&gt;
+  <mark>import { ScriptDependentElement } from
+    'https://esm.sh/@aarongustafson/script-dependent@0.0.1/script-dependent.js?bundle&amp;target=es2022';</mark>
+
+  if (!<mark>customElements.get('script-dependent')</mark>) {
+    <mark>customElements.define('script-dependent', ScriptDependentElement);</mark>
+  }
+&lt;/script&gt;
+
+<mark>&lt;script-dependent&gt;</mark>
+  &lt;p&gt;Replace this markup once you customize script-dependent.&lt;/p&gt;
+<mark>&lt;/script-dependent&gt;</mark></code></pre>
+					<div class="demo">
+						<script-dependent>
+							<p>
+								Replace this markup once you customize
+								script-dependent.
+							</p>
+						</script-dependent>
+					</div>
+				</div>
+			</section>
+		</main>
+
+		<script type="module">
+			import { ScriptDependentElement } from 'https://esm.sh/@aarongustafson/script-dependent@0.0.1/script-dependent.js?bundle&target=es2022';
+
+			if (!customElements.get('script-dependent')) {
+				customElements.define('script-dependent', ScriptDependentElement);
+			}
+		</script>
+	</body>
+</html>
