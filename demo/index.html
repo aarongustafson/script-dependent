@@ -129,16 +129,42 @@ Template content starts inert.</textarea>
 					<code>retry()</code> starts another attempt; this example
 					will fail again rather than pretend to recover.
 				</p>
+				<p>
+					The status paragraph and hidden retry button are authored in
+					the HTML, outside the gate. The
+					<a href="./demo.js">demo JavaScript</a> replaces the
+					paragraph’s text and reveals the retry button when it
+					receives <code>script-dependent:error</code>. The component
+					emits the event; it doesn’t create messages or recovery
+					controls.
+				</p>
 				<div class="code-demo-pair">
 					<pre
 						tabindex="0"
-					><code><mark>&lt;script-dependent script="./failure.js" hidden&gt;</mark>
+					><code><mark>&lt;script-dependent id="failure" script="./failure.js" hidden&gt;</mark>
   &lt;button type="button"&gt;Open enhanced editor&lt;/button&gt;
 <mark>&lt;/script-dependent&gt;</mark>
 &lt;p&gt;&lt;a href="#existing-text"&gt;Use the ordinary text field&lt;/a&gt;&lt;/p&gt;
+&lt;p id="failure-status" role="status"&gt;
+  The ordinary text field is always available.
+&lt;/p&gt;
+&lt;button id="retry" type="button" hidden&gt;Try again&lt;/button&gt;
 
-<mark>gate.addEventListener('script-dependent:error', showError);
-retryButton.addEventListener('click', () =&gt; gate.retry());</mark></code></pre>
+&lt;script type="module"&gt;
+  const gate = document.querySelector('#failure');
+  const status = document.querySelector('#failure-status');
+  const retry = document.querySelector('#retry');
+
+  <mark>gate.addEventListener('script-dependent:error', () =&gt; {
+    status.textContent =
+      'The enhancement could not start. ' +
+      'The ordinary text field is still available.';
+    retry.hidden = false;
+  });
+  retry.addEventListener('click', () =&gt; gate.retry());
+
+  await import('../define.js');</mark>
+&lt;/script&gt;</code></pre>
 					<div class="demo">
 						<script-dependent
 							id="failure"
