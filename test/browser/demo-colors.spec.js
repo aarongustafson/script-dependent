@@ -1,6 +1,13 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
 
+test.beforeEach(async ({ page }) => {
+	await page.route(
+		'https://cdn.jsdelivr.net/npm/microlighter@2.2.0/dist/**',
+		(route) => route.abort(),
+	);
+});
+
 const styles = await readFile(
 	new URL('../../demo/styles.css', import.meta.url),
 	'utf8',
@@ -560,7 +567,7 @@ test('code/live examples stack without horizontal page overflow', async ({
 	page,
 }) => {
 	await render(page);
-	const code = page.locator('.code-demo-pair > pre');
+	const code = page.locator('.code-demo-pair > :is(pre, micro-lighter)');
 	const demo = page.locator('.code-demo-pair > .demo');
 	const wideCode = await code.boundingBox();
 	const wideDemo = await demo.boundingBox();

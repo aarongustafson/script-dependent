@@ -4,12 +4,19 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>&lt;script-dependent&gt; demo</title>
+		<link
+			rel="stylesheet"
+			href="https://cdn.jsdelivr.net/npm/microlighter@2.2.0/dist/themes/github.css"
+		/>
 		<link rel="stylesheet" href="./styles.css" />
+		<link rel="stylesheet" href="./demo-shell.css" />
 	</head>
-	<body>
+	<body data-syntax-theme="github">
+		<a class="skip-link" href="#main">Skip to examples</a>
 		<header>
+			<p class="eyebrow">Web component / Examples</p>
 			<h1>&lt;script-dependent&gt;</h1>
-			<p>
+			<p class="lede">
 				Reveal dependent controls when their module is ready. Read the
 				<a
 					href="https://github.com/aarongustafson/script-dependent/blob/main/README.md"
@@ -17,8 +24,26 @@
 				>
 				for the complete API.
 			</p>
+			<nav aria-label="Component resources">
+				<a
+					href="https://github.com/aarongustafson/script-dependent/blob/main/README.md"
+					>Read the README</a
+				>
+				<a href="https://github.com/aarongustafson/script-dependent"
+					>View on GitHub</a
+				>
+				<a href="./esm.html">esm.sh example</a>
+				<a href="./unpkg.html">unpkg example</a>
+			</nav>
 		</header>
-		<main>
+		<main id="main" tabindex="-1">
+			<p
+				id="microlighter-status"
+				class="enhancement-status"
+				role="status"
+				hidden
+			></p>
+
 			<section>
 				<h2>Readiness, not just downloading</h2>
 				<p>
@@ -51,14 +76,22 @@
 					stays outside the gate.
 				</p>
 				<div class="code-demo-pair">
-					<pre
-						tabindex="0"
-					><code>&lt;label for="existing-text"&gt;Your draft&lt;/label&gt;
+					<micro-lighter
+						class="code-panel"
+						language="html"
+						controls="copy"
+						data-label="HTML"
+					>
+						<pre
+							aria-label="Existing markup code 1"
+							tabindex="0"
+						><code>&lt;label for="existing-text"&gt;Your draft&lt;/label&gt;
 &lt;textarea id="existing-text"&gt;&lt;/textarea&gt;
 <mark>&lt;script-dependent script="./word-count.js" hidden&gt;</mark>
   &lt;button type="button"&gt;Count words&lt;/button&gt;
   &lt;p&gt;Words: &lt;output aria-live="polite"&gt;0&lt;/output&gt;&lt;/p&gt;
 <mark>&lt;/script-dependent&gt;</mark></code></pre>
+					</micro-lighter>
 					<div class="demo">
 						<label for="existing-text">Your draft</label>
 						<textarea id="existing-text" rows="3">
@@ -87,9 +120,16 @@ Start with a few words.</textarea>
 					content to the initializer.
 				</p>
 				<div class="code-demo-pair">
-					<pre
-						tabindex="0"
-					><code>&lt;label for="template-text"&gt;Another draft&lt;/label&gt;
+					<micro-lighter
+						class="code-panel"
+						language="html"
+						controls="copy"
+						data-label="HTML"
+					>
+						<pre
+							aria-label="Inert template content code 2"
+							tabindex="0"
+						><code>&lt;label for="template-text"&gt;Another draft&lt;/label&gt;
 &lt;textarea id="template-text"&gt;&lt;/textarea&gt;
 <mark>&lt;script-dependent script="./word-count.js" hidden&gt;</mark>
   &lt;template&gt;
@@ -97,6 +137,7 @@ Start with a few words.</textarea>
     &lt;p&gt;Words: &lt;output aria-live="polite"&gt;0&lt;/output&gt;&lt;/p&gt;
   &lt;/template&gt;
 <mark>&lt;/script-dependent&gt;</mark></code></pre>
+					</micro-lighter>
 					<div class="demo">
 						<label for="template-text">Another draft</label>
 						<textarea id="template-text" rows="3">
@@ -139,9 +180,16 @@ Template content starts inert.</textarea>
 					controls.
 				</p>
 				<div class="code-demo-pair">
-					<pre
-						tabindex="0"
-					><code><mark>&lt;script-dependent id="failure" script="./failure.js" hidden&gt;</mark>
+					<micro-lighter
+						class="code-panel"
+						language="html"
+						controls="copy"
+						data-label="HTML"
+					>
+						<pre
+							aria-label="Failure and recovery code 3"
+							tabindex="0"
+						><code><mark>&lt;script-dependent id="failure" script="./failure.js" hidden&gt;</mark>
   &lt;button type="button"&gt;Open enhanced editor&lt;/button&gt;
 <mark>&lt;/script-dependent&gt;</mark>
 &lt;p&gt;&lt;a href="#existing-text"&gt;Use the ordinary text field&lt;/a&gt;&lt;/p&gt;
@@ -165,6 +213,7 @@ Template content starts inert.</textarea>
 
   await import('../define.js');</mark>
 &lt;/script&gt;</code></pre>
+					</micro-lighter>
 					<div class="demo">
 						<script-dependent
 							id="failure"
@@ -199,5 +248,6 @@ Template content starts inert.</textarea>
 			</p>
 		</footer>
 		<script type="module" src="./demo.js"></script>
+		<script type="module" src="./code-examples.js"></script>
 	</body>
 </html>

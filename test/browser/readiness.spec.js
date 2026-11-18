@@ -4,6 +4,13 @@ import { resolve, extname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test, expect } from '@playwright/test';
 
+test.beforeEach(async ({ page }) => {
+	await page.route(
+		'https://cdn.jsdelivr.net/npm/microlighter@2.2.0/dist/**',
+		(route) => route.abort(),
+	);
+});
+
 const root = fileURLToPath(new URL('../../', import.meta.url));
 let server;
 let origin;
@@ -187,7 +194,9 @@ test('real modules gate existing and template controls without moving focus', as
 		await blocked;
 		await route.continue();
 	});
-	await page.goto(`${origin}/demo/index.html`);
+	await page.goto(`${origin}/demo/index.html`, {
+		waitUntil: 'domcontentloaded',
+	});
 	await expect(page.locator('#existing')).toBeHidden();
 	await expect(page.locator('#templated button')).toHaveCount(0);
 	await page.locator('#existing-text').focus();
