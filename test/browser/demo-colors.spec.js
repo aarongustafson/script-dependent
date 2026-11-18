@@ -1,10 +1,19 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
 
-const styles = await readFile(
-	new URL('../../demo/styles.css', import.meta.url),
-	'utf8',
+test.beforeEach(async ({ page }) => {
+	await page.route(
+		'https://cdn.jsdelivr.net/npm/microlighter@2.2.0/dist/**',
+		(route) => route.abort(),
+	);
+});
+
+const [baseStyles, shellStyles] = await Promise.all(
+	['styles.css', 'demo-shell.css'].map((file) =>
+		readFile(new URL(`../../demo/${file}`, import.meta.url), 'utf8'),
+	),
 );
+const styles = `${baseStyles}\n${shellStyles}`;
 
 // The study's 62 scheme observations reduce to 19 palettes for these eight
 // tokens. Preserve alpha; these fixtures test authored CSS, not OS repainting.
@@ -207,7 +216,7 @@ function usesButtonSurface(sample) {
 		: [0, 4].includes(sample.selector.small);
 }
 
-test('preserves the original surface roles and decorative accents', async ({
+test('pairs refreshed surfaces, native controls, and notes with system colors', async ({
 	page,
 }) => {
 	await page.emulateMedia({
@@ -220,6 +229,8 @@ test('preserves the original surface roles and decorative accents', async ({
 		const probes = document.createElement('div');
 		probes.innerHTML = `
 			<span id="button-palette" style="color:ButtonText;background:ButtonFace;border:1px solid ButtonBorder"></span>
+			<span id="canvas-palette" style="color:CanvasText;background:Canvas"></span>
+			<span id="rule-palette" style="color:var(--rule)"></span>
 			<span id="mark-palette" style="color:MarkText;background:Mark"></span>
 			<span id="accent-palette" style="color:AccentColor"></span>`;
 		body.appendChild(probes);
@@ -239,29 +250,33 @@ test('preserves the original surface roles and decorative accents', async ({
 		'header code',
 		'button[type="submit"]',
 		'button[type="reset"]',
-		'.demo-section',
 	]) {
 		const actual = await colors(selector);
 		expect(actual.foreground, selector).toBe(button.foreground);
 		expect(actual.background, selector).toBe(button.background);
 	}
-	expect((await colors('.demo-section > p')).foreground).toBe(
-		button.foreground,
-	);
-	expect((await colors('.demo-section > small')).foreground).toBe(
-		button.foreground,
-	);
+	const canvas = await colors('#canvas-palette');
+	for (const selector of ['.demo-section', '.api-reference', '.demo']) {
+		const actual = await colors(selector);
+		expect(actual.foreground, selector).toBe(canvas.foreground);
+		expect(actual.background, selector).toBe(canvas.background);
+	}
+	for (const selector of ['.demo-section > p', '.demo-section > small'])
+		expect((await colors(selector)).foreground, selector).toBe(
+			canvas.foreground,
+		);
 	const mark = await colors('#mark-palette');
 	for (const selector of ['.note', '.note code', '.note a', '.note > small'])
 		expect((await colors(selector)).foreground, selector).toBe(
 			mark.foreground,
 		);
 	expect((await colors('.note')).background).toBe(mark.background);
-	for (const selector of ['footer', '.demo-section', '.demo'])
-		expect((await colors(selector)).border, selector).toBe(button.border);
+	expect((await colors('footer')).border).toBe(canvas.foreground);
+	const rule = (await colors('#rule-palette')).foreground;
+	for (const selector of ['.demo-section', '.demo', '.api-reference'])
+		expect((await colors(selector)).border, selector).toBe(rule);
 	const accent = (await colors('#accent-palette')).foreground;
-	for (const selector of ['.note', '.api-reference'])
-		expect((await colors(selector)).accent, selector).toBe(accent);
+	expect((await colors('.note')).accent).toBe(accent);
 	expect((await colors('.code-demo-pair')).background).toBe(
 		'rgba(0, 0, 0, 0)',
 	);
@@ -560,7 +575,7 @@ test('code/live examples stack without horizontal page overflow', async ({
 	page,
 }) => {
 	await render(page);
-	const code = page.locator('.code-demo-pair > pre');
+	const code = page.locator('.code-demo-pair > :is(pre, micro-lighter)');
 	const demo = page.locator('.code-demo-pair > .demo');
 	const wideCode = await code.boundingBox();
 	const wideDemo = await demo.boundingBox();
@@ -589,7 +604,15 @@ test.describe('authored demo without JavaScript', () => {
 			if (path === '/demo/index.html')
 				await route.fulfill({ contentType: 'text/html', body: html });
 			else if (path === '/demo/styles.css')
-				await route.fulfill({ contentType: 'text/css', body: styles });
+				await route.fulfill({
+					contentType: 'text/css',
+					body: baseStyles,
+				});
+			else if (path === '/demo/demo-shell.css')
+				await route.fulfill({
+					contentType: 'text/css',
+					body: shellStyles,
+				});
 			else
 				await route.fulfill({
 					status: 404,
@@ -599,6 +622,7 @@ test.describe('authored demo without JavaScript', () => {
 		await page.goto('http://demo.test/demo/index.html');
 		const pairs = page.locator('.code-demo-pair');
 		await expect(pairs).toHaveCount(3);
+		await expect(pairs.first()).toHaveCSS('display', 'grid');
 		await expect(page.locator('#existing-text')).toBeVisible();
 		await expect(page.locator('#existing')).toBeHidden();
 		await expect(page.locator('#templated')).toBeHidden();

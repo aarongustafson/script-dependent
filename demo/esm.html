@@ -5,8 +5,10 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>script-dependent via esm.sh</title>
 		<link rel="stylesheet" href="./styles.css" />
+		<link rel="stylesheet" href="./demo-shell.css" />
 	</head>
-	<body>
+	<body data-syntax-theme="github">
+		<a class="skip-link" href="#main">Skip to examples</a>
 		<h1>esm.sh CDN sanity check</h1>
 		<p>
 			This page loads the component class from <code>esm.sh</code> and
@@ -14,11 +16,27 @@
 			published; the local demo does not depend on a CDN.
 		</p>
 
-		<main>
+		<main id="main" tabindex="-1">
+			<p
+				id="microlighter-status"
+				class="enhancement-status"
+				role="status"
+				hidden
+			></p>
+
 			<section class="demo-section">
 				<h2>Import and register the class</h2>
 				<div class="code-demo-pair">
-					<pre tabindex="0"><code>&lt;script type="module"&gt;
+					<micro-lighter
+						class="code-panel"
+						language="html"
+						controls="copy"
+						data-label="HTML"
+					>
+						<pre
+							aria-label="Import and register the class code 1"
+							tabindex="0"
+						><code>&lt;script type="module"&gt;
   <mark>import { ScriptDependentElement } from
     'https://esm.sh/@aarongustafson/script-dependent@1.0.0/script-dependent.js?bundle&amp;target=es2022';</mark>
 
@@ -36,6 +54,7 @@
   &lt;button type="button"&gt;Count words&lt;/button&gt;
   &lt;p&gt;Words: &lt;output aria-live="polite"&gt;0&lt;/output&gt;&lt;/p&gt;
 <mark>&lt;/script-dependent&gt;</mark></code></pre>
+					</micro-lighter>
 					<div class="demo">
 						<label for="draft">Your draft</label>
 						<textarea id="draft" rows="3">
@@ -69,5 +88,6 @@ Count words after the module is ready.</textarea>
 				);
 			}
 		</script>
+		<script type="module" src="./code-examples.js"></script>
 	</body>
 </html>
