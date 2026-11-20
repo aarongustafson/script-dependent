@@ -1,5 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
+import {
+	expectNativeFocus,
+	readDemoStyles,
+	serveDemo,
+} from './demo-fixture.js';
 
 test.beforeEach(async ({ page }) => {
 	await page.route(
@@ -8,12 +13,34 @@ test.beforeEach(async ({ page }) => {
 	);
 });
 
-const [baseStyles, shellStyles] = await Promise.all(
-	['styles.css', 'demo-shell.css'].map((file) =>
-		readFile(new URL(`../../demo/${file}`, import.meta.url), 'utf8'),
-	),
-);
-const styles = `${baseStyles}\n${shellStyles}`;
+const styles = await readDemoStyles();
+
+test('shared form defaults yield to layered component controls', async ({
+	page,
+}) => {
+	await page.setContent(`
+		<style>
+			${styles}
+			@layer example-control {
+				.example-control { margin: 0; padding: 0; line-height: 1.5; }
+				.example-control label {
+					display: inline-flex;
+					min-block-size: 44px;
+					margin: 0;
+					padding: 0.5rem;
+				}
+			}
+		</style>
+		<fieldset class="example-control">
+			<legend>Example control</legend>
+			<label><input type="radio" name="example">Choice</label>
+		</fieldset>
+	`);
+	const label = page.locator('label');
+	await expect(label).toHaveCSS('display', 'inline-flex');
+	await expect(page.locator('fieldset')).toHaveCSS('margin-top', '0px');
+	expect((await label.boundingBox()).height).toBeGreaterThanOrEqual(44);
+});
 
 // The study's 62 scheme observations reduce to 19 palettes for these eight
 // tokens. Preserve alpha; these fixtures test authored CSS, not OS repainting.
@@ -58,7 +85,7 @@ const palettes = [
 	[1, '#202020', '#ffffff', '#00000000', '#ffffff', '#00000000', '#ffffff'],
 ];
 
-const markup = `<!doctype html><html lang="en"><body>
+const markup = `<!doctype html><html lang="en"><body data-demo-page="full">
 	<header><h1>Demo palette</h1><a href="#example">Example link</a><code>Inline code</code></header>
 	<main>
 		<section class="demo-section" id="example">
@@ -193,30 +220,22 @@ async function measurements(page, includeLinks = false) {
 				ratio: Math.max(ratio(border, surround), ratio(fill, surround)),
 			};
 		});
-		const surround = background(field.parentElement);
-		const outline = paint(getComputedStyle(field).outlineColor);
 		return {
 			text,
 			controls,
-			focus: ratio(outline, surround),
-			focusWidth: parseFloat(getComputedStyle(field).outlineWidth),
 		};
 	}, includeLinks);
 }
 
 function usesButtonSurface(sample) {
 	return typeof sample.selector === 'string'
-		? [
-				'header code',
-				'.demo-section > p',
-				'.demo-section > p code',
-				'button',
-				'button[type="reset"]',
-			].includes(sample.selector)
-		: [0, 4].includes(sample.selector.small);
+		? ['header code', 'button', 'button[type="reset"]'].includes(
+				sample.selector,
+			)
+		: sample.selector.small === 4;
 }
 
-test('pairs refreshed surfaces, native controls, and notes with system colors', async ({
+test('pairs the demo shell surfaces and preserves note accents', async ({
 	page,
 }) => {
 	await page.emulateMedia({
@@ -229,8 +248,7 @@ test('pairs refreshed surfaces, native controls, and notes with system colors', 
 		const probes = document.createElement('div');
 		probes.innerHTML = `
 			<span id="button-palette" style="color:ButtonText;background:ButtonFace;border:1px solid ButtonBorder"></span>
-			<span id="canvas-palette" style="color:CanvasText;background:Canvas"></span>
-			<span id="rule-palette" style="color:var(--rule)"></span>
+			<span id="canvas-palette" style="color:CanvasText;background:Canvas;border:1px solid color-mix(in srgb, CanvasText 22%, Canvas)"></span>
 			<span id="accent-palette" style="color:AccentColor"></span>`;
 		body.appendChild(probes);
 	});
@@ -255,7 +273,7 @@ test('pairs refreshed surfaces, native controls, and notes with system colors', 
 		expect(actual.background, selector).toBe(button.background);
 	}
 	const canvas = await colors('#canvas-palette');
-	for (const selector of ['.demo-section', '.api-reference', '.demo']) {
+	for (const selector of ['.demo-section', '.demo', '.api-reference']) {
 		const actual = await colors(selector);
 		expect(actual.foreground, selector).toBe(canvas.foreground);
 		expect(actual.background, selector).toBe(
@@ -263,23 +281,55 @@ test('pairs refreshed surfaces, native controls, and notes with system colors', 
 		);
 	}
 	for (const selector of ['.demo-section > p', '.demo-section > small'])
-		expect((await colors(selector)).foreground, selector).toBe(
-			canvas.foreground,
-		);
+		expect((await colors(selector)).foreground).toBe(canvas.foreground);
 	for (const selector of ['.note', '.note code', '.note a', '.note > small'])
 		expect((await colors(selector)).foreground, selector).toBe(
 			canvas.foreground,
 		);
 	expect((await colors('.note')).background).toBe(canvas.background);
+	for (const selector of ['.demo-section', '.demo'])
+		expect((await colors(selector)).border, selector).toBe(canvas.border);
 	expect((await colors('footer')).border).toBe(canvas.foreground);
-	const rule = (await colors('#rule-palette')).foreground;
-	for (const selector of ['.demo-section', '.demo', '.api-reference'])
-		expect((await colors(selector)).border, selector).toBe(rule);
 	const accent = (await colors('#accent-palette')).foreground;
 	expect((await colors('.note')).accent).toBe(accent);
 	expect((await colors('.code-demo-pair')).background).toBe(
 		'rgba(0, 0, 0, 0)',
 	);
+});
+
+test('translucent fields retain contrast over colored labels', async ({
+	page,
+}) => {
+	const [, ...values] = palettes[5];
+	const colors = Object.fromEntries(
+		tokens.map((token, index) => [
+			token,
+			[...values, '#ffff00', '#000000'][index],
+		]),
+	);
+	await page.emulateMedia({
+		colorScheme: 'light',
+		forcedColors: 'none',
+		contrast: 'no-preference',
+	});
+	await render(
+		page,
+		styles.replace(
+			/\b(CanvasText|Canvas|ButtonFace|ButtonText|FieldText|Field|MarkText|Mark)\b/g,
+			(token) => colors[token],
+		),
+	);
+	await page.locator('label').evaluate((label) => {
+		label.style.backgroundColor = 'pink';
+		label.append(document.querySelector('input'));
+	});
+	const samples = await measurements(page);
+	expect(
+		samples.text.find((sample) => sample.selector === 'input').ratio,
+	).toBeGreaterThanOrEqual(4.5);
+	expect(
+		samples.controls.find((sample) => sample.selector === 'INPUT').ratio,
+	).toBeGreaterThanOrEqual(3);
 });
 
 for (const [index, [observations, ...values]] of palettes.entries()) {
@@ -339,8 +389,8 @@ for (const [index, [observations, ...values]] of palettes.entries()) {
 			expect(sample.ratio, JSON.stringify(sample)).toBeGreaterThanOrEqual(
 				3,
 			);
-		expect(samples.focus).toBeGreaterThanOrEqual(3);
-		expect(samples.focusWidth).toBeGreaterThanOrEqual(2);
+		// Native outlines use the browser palette, not the substituted CSS tokens.
+		await expectNativeFocus(page.locator('input'));
 
 		for (const type of ['submit', 'reset']) {
 			const button = page.locator(`button[type="${type}"]`);
@@ -401,7 +451,7 @@ for (const scheme of ['light', 'dark']) {
 				(sample) => !usesButtonSurface(sample) && sample.ratio < 4.5,
 			),
 		).toEqual([]);
-		expect(samples.focus).toBeGreaterThanOrEqual(3);
+		await expectNativeFocus(page.locator('input'));
 
 		const link = page.locator('header a');
 		await link.hover();
@@ -512,25 +562,18 @@ for (const preference of ['more-contrast', 'forced-colors']) {
 	});
 }
 
-test('focus colors follow the surrounding note and live-demo surfaces', async ({
+test('note and live-demo controls preserve native keyboard focus', async ({
 	page,
+	browserName,
 }) => {
 	await render(page);
-	for (const [selector, surface] of [
-		['.note a', '.note'],
-		['input', '.demo'],
-	]) {
-		await page.locator(selector).focus();
-		const outline = await page.locator(selector).evaluate((element) => ({
-			color: getComputedStyle(element).outlineColor,
-			width: getComputedStyle(element).outlineWidth,
-		}));
-		const foreground = await page
-			.locator(surface)
-			.evaluate((element) => getComputedStyle(element).color);
-		expect(outline.color).toBe(foreground);
-		expect(parseFloat(outline.width)).toBeGreaterThanOrEqual(2);
-	}
+	await page.keyboard.press(
+		browserName === 'webkit' && process.platform === 'darwin'
+			? 'Alt+Tab'
+			: 'Tab',
+	);
+	for (const selector of ['.note a', 'input'])
+		await expectNativeFocus(page.locator(selector));
 });
 
 test('more contrast keeps supporting text at full strength', async ({
@@ -561,7 +604,7 @@ test('forced-color emulation preserves paired prose and focus', async ({
 		expect(sample.ratio, JSON.stringify(sample)).toBeGreaterThanOrEqual(
 			4.5,
 		);
-	expect(samples.focus).toBeGreaterThanOrEqual(3);
+	await expectNativeFocus(page.locator('input'));
 	const colors = await page.locator('footer').evaluate((element) => ({
 		footer: getComputedStyle(element).color,
 		body: getComputedStyle(document.body).color,
@@ -599,41 +642,47 @@ test.describe('authored demo without JavaScript', () => {
 			new URL('../../demo/index.html', import.meta.url),
 			'utf8',
 		);
-		await page.route('**/*', async (route) => {
-			const path = new URL(route.request().url()).pathname;
-			if (path === '/demo/index.html')
-				await route.fulfill({ contentType: 'text/html', body: html });
-			else if (path === '/demo/styles.css')
-				await route.fulfill({
-					contentType: 'text/css',
-					body: baseStyles,
-				});
-			else if (path === '/demo/demo-shell.css')
-				await route.fulfill({
-					contentType: 'text/css',
-					body: shellStyles,
-				});
-			else
-				await route.fulfill({
-					status: 404,
-					body: 'No fixture for this URL.',
-				});
-		});
-		await page.goto('http://demo.test/demo/index.html');
+		await serveDemo(page);
+		await page.goto('http://code-demo.test/demo/index.html');
 		const pairs = page.locator('.code-demo-pair');
-		await expect(pairs).toHaveCount(3);
-		await expect(pairs.first()).toHaveCSS('display', 'grid');
-		await expect(page.locator('#existing-text')).toBeVisible();
-		await expect(page.locator('#existing')).toBeHidden();
-		await expect(page.locator('#templated')).toBeHidden();
-		await expect(page.locator('#failure')).toBeHidden();
+		const authoredPairs = [
+			...html.matchAll(/class="code-demo-pair(?:\s[^"]*)?"/g),
+		].length;
+		expect(authoredPairs).toBeGreaterThan(0);
+		await expect(pairs).toHaveCount(authoredPairs);
+		const hasFallback = await page
+			.locator('.demo')
+			.first()
+			.evaluate(
+				(element) =>
+					Boolean(element.textContent.trim()) ||
+					[...element.querySelectorAll('img[alt]')].some(
+						(image) =>
+							image.getAttribute('alt').trim() &&
+							image.getClientRects().length > 0,
+					),
+			);
+		expect(hasFallback).toBe(true);
 		for (const width of [1000, 320]) {
 			await page.setViewportSize({ width, height: 800 });
 			for (const pair of await pairs.all()) {
-				const code = await pair.locator('pre').boundingBox();
-				const demo = await pair.locator('.demo').boundingBox();
-				if (width >= 768) expect(demo.x).toBeGreaterThan(code.x);
-				else expect(demo.y).toBeGreaterThan(code.y);
+				const code = await pair
+					.locator(':scope > :first-child')
+					.boundingBox();
+				const demo = await pair.locator(':scope > .demo').boundingBox();
+				expect(code).not.toBeNull();
+				expect(demo).not.toBeNull();
+				const columns = await pair.evaluate(
+					(element) =>
+						getComputedStyle(element).gridTemplateColumns.split(' ')
+							.length,
+				);
+				if (width < 768) expect(columns).toBe(1);
+				if (columns > 1) {
+					expect(demo.x).toBeGreaterThanOrEqual(code.x + code.width);
+				} else {
+					expect(demo.y).toBeGreaterThanOrEqual(code.y + code.height);
+				}
 			}
 			expect(
 				await page.evaluate(() => document.documentElement.scrollWidth),

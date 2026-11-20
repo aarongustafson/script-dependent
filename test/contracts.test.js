@@ -4,6 +4,12 @@ import { describe, expect, it } from 'vitest';
 
 const json = (file) => JSON.parse(readFileSync(file, 'utf8'));
 
+it('trims block-edge margins inside demo sections', () => {
+	expect(readFileSync('demo/demo-shell.css', 'utf8')).toMatch(
+		/\.demo-section(?:,\s*\.api-reference)?\s*\{[^}]*\bmargin-trim:\s*block;/,
+	);
+});
+
 describe('published API and automation', () => {
 	it('keeps auto-registration separate from the class-only module', async () => {
 		const { ScriptDependentElement } =

@@ -293,3 +293,62 @@ test('demo reflows and keeps code/live order in light, dark and forced colors', 
 	expect(layout.width).toBeLessThanOrEqual(320);
 	expect(layout.code).toBeLessThanOrEqual(layout.live);
 });
+
+const [baseStyles, shellStyles] = await Promise.all(
+	['styles.css', 'demo-shell.css'].map((file) =>
+		readFile(new URL('../../demo/' + file, import.meta.url), 'utf8'),
+	),
+);
+
+test.describe('authored demo without JavaScript', () => {
+	test.use({ javaScriptEnabled: false });
+
+	test('keeps fallback content and code/live pairs usable', async ({
+		page,
+	}) => {
+		const html = await readFile(
+			new URL('../../demo/index.html', import.meta.url),
+			'utf8',
+		);
+		await page.route('**/*', async (route) => {
+			const path = new URL(route.request().url()).pathname;
+			if (path === '/demo/index.html')
+				await route.fulfill({ contentType: 'text/html', body: html });
+			else if (path === '/demo/styles.css')
+				await route.fulfill({
+					contentType: 'text/css',
+					body: baseStyles,
+				});
+			else if (path === '/demo/demo-shell.css')
+				await route.fulfill({
+					contentType: 'text/css',
+					body: shellStyles,
+				});
+			else
+				await route.fulfill({
+					status: 404,
+					body: 'No fixture for this URL.',
+				});
+		});
+		await page.goto('http://demo.test/demo/index.html');
+		const pairs = page.locator('.code-demo-pair');
+		await expect(pairs).toHaveCount(3);
+		await expect(pairs.first()).toHaveCSS('display', 'grid');
+		await expect(page.locator('#existing-text')).toBeVisible();
+		await expect(page.locator('#existing')).toBeHidden();
+		await expect(page.locator('#templated')).toBeHidden();
+		await expect(page.locator('#failure')).toBeHidden();
+		for (const width of [1000, 320]) {
+			await page.setViewportSize({ width, height: 800 });
+			for (const pair of await pairs.all()) {
+				const code = await pair.locator('pre').boundingBox();
+				const demo = await pair.locator('.demo').boundingBox();
+				if (width >= 768) expect(demo.x).toBeGreaterThan(code.x);
+				else expect(demo.y).toBeGreaterThan(code.y);
+			}
+			expect(
+				await page.evaluate(() => document.documentElement.scrollWidth),
+			).toBeLessThanOrEqual(width);
+		}
+	});
+});
