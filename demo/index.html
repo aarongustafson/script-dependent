@@ -4,10 +4,10 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>&lt;script-dependent&gt; demo</title>
-		<link rel="stylesheet" href="./styles.css" />
 		<link rel="stylesheet" href="./demo-shell.css" />
+		<link rel="stylesheet" href="./styles.css" />
 	</head>
-	<body data-syntax-theme="github">
+	<body data-demo-page="full" data-syntax-theme="github">
 		<a class="skip-link" href="#main">Skip to examples</a>
 		<header>
 			<p class="eyebrow">Web component / Examples</p>
@@ -36,6 +36,9 @@
 			<p
 				id="microlighter-status"
 				class="enhancement-status"
+				data-loading-message="Loading optional code highlighting and Copy controls."
+				data-failure-message="MicroLighter could not load. Code remains readable and selectable; the component loads independently."
+				data-theme-failure-message="Code highlighting and Copy controls are available, but the syntax theme could not load. The component loads independently."
 				role="status"
 				hidden
 			></p>
@@ -88,7 +91,7 @@
   &lt;p&gt;Words: &lt;output aria-live="polite"&gt;0&lt;/output&gt;&lt;/p&gt;
 <mark>&lt;/script-dependent&gt;</mark></code></pre>
 					</micro-lighter>
-					<div class="demo">
+					<div class="demo" data-demo-label="Live example">
 						<label for="existing-text">Your draft</label>
 						<textarea id="existing-text" rows="3">
 Start with a few words.</textarea>
@@ -134,7 +137,7 @@ Start with a few words.</textarea>
   &lt;/template&gt;
 <mark>&lt;/script-dependent&gt;</mark></code></pre>
 					</micro-lighter>
-					<div class="demo">
+					<div class="demo" data-demo-label="Live example">
 						<label for="template-text">Another draft</label>
 						<textarea id="template-text" rows="3">
 Template content starts inert.</textarea>
@@ -210,7 +213,7 @@ Template content starts inert.</textarea>
   await import('../define.js');</mark>
 &lt;/script&gt;</code></pre>
 					</micro-lighter>
-					<div class="demo">
+					<div class="demo" data-demo-label="Live example">
 						<script-dependent
 							id="failure"
 							script="./failure.js"
